@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- Icons -->
+        <file>icons/clipboard.png</file>
+        <file>icons/settings.png</file>
+        <file>icons/clear.png</file>
+        
+        <!-- Stylesheets -->
+        <file>styles/main.qss</file>
+        
+        <!-- Translations -->
+        <file>translations/clipboardmanager_en.qm</file>
+    </qresource>
+</RCC>
