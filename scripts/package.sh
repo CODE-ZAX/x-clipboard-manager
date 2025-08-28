@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ClipboardManager Packaging Script
+# Xclipy Packaging Script
 # This script creates distributable packages
 
 set -e
@@ -20,10 +20,10 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
 # Version from CMakeLists.txt or default
-VERSION=$(grep "VERSION" CMakeLists.txt | head -1 | sed 's/.*VERSION \([0-9.]*\).*/\1/' || echo "1.2.0")
-PACKAGE_NAME="ClipboardManager-${VERSION}"
+VERSION=$(grep "XCLIPY_VERSION" CMakeLists.txt | head -1 | sed 's/.*XCLIPY_VERSION "\([0-9.]*\)".*/\1/' || echo "1.0.0")
+PACKAGE_NAME="Xclipy-${VERSION}"
 
-echo -e "${GREEN}Packaging ClipboardManager v${VERSION}...${NC}"
+echo -e "${GREEN}Packaging Xclipy v${VERSION}...${NC}"
 
 # Ensure we have a clean build
 echo -e "${YELLOW}Building application...${NC}"
@@ -35,7 +35,7 @@ mkdir -p "$PACKAGE_DIR"
 
 # Copy application
 echo -e "${YELLOW}Copying application...${NC}"
-cp -r build/ClipboardManager* "$PACKAGE_DIR/"
+cp -r build/Xclipy* "$PACKAGE_DIR/"
 
 # Copy documentation
 echo -e "${YELLOW}Copying documentation...${NC}"
@@ -55,14 +55,14 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # Create DMG
     if command -v create-dmg &> /dev/null; then
         create-dmg \
-            --volname "ClipboardManager ${VERSION}" \
+            --volname "Xclipy ${VERSION}" \
             --window-pos 200 120 \
             --window-size 600 300 \
             --icon-size 100 \
-            --icon "ClipboardManager.app" 175 120 \
-            --hide-extension "ClipboardManager.app" \
+            --icon "Xclipy.app" 175 120 \
+            --hide-extension "Xclipy.app" \
             --app-drop-link 425 120 \
-            "packages/ClipboardManager-${VERSION}-macOS.dmg" \
+            "packages/Xclipy-${VERSION}-macOS.dmg" \
             "$PACKAGE_DIR/"
     else
         echo -e "${YELLOW}create-dmg not found. Creating zip archive...${NC}"

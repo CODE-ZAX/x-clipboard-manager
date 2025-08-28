@@ -1,5 +1,12 @@
 TEMPLATE = app
-TARGET = ClipboardManager
+TARGET = Xclipy
+
+# Application metadata
+VERSION = 1.0.0
+DEFINES += APP_VERSION=\\\"$$VERSION\\\"
+DEFINES += APP_NAME=\\\"Xclipy\\\"
+DEFINES += APP_ORGANIZATION=\\\"Xclipy\\\"
+DEFINES += APP_DOMAIN=\\\"xclipy.com\\\"
 
 QT += core gui widgets
 
@@ -8,6 +15,17 @@ CONFIG += c++17
 # Platform-specific libraries
 macx {
     LIBS += -framework Carbon
+    
+    # macOS bundle configuration
+    ICON = resources/icons/clipboard.icns
+    QMAKE_INFO_PLIST = Info.plist
+    
+    # Set bundle version
+    QMAKE_BUNDLE_VERSION = 1.0.0
+    QMAKE_BUNDLE_SHORT_VERSION_STRING = 1.0
+    
+    # Bundle identifier
+    QMAKE_BUNDLE_IDENTIFIER = com.xclipy.app
 }
 
 win32 {

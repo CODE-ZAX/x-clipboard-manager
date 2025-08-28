@@ -15,11 +15,15 @@
 HistoryWindow::HistoryWindow(ClipboardManager *manager, QWidget *parent)
     : QWidget(parent), clipboardManager(manager) {
 
-    setWindowTitle("Clipboard History");
+    setWindowTitle("Xclipy - Clipboard History");
     resize(500, 400);
 
-    // Always stay on top
-    setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+    // Always stay on top of all applications
+    setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint | Qt::Tool);
+    
+    // Set window attributes for better top-level behavior
+    setAttribute(Qt::WA_ShowWithoutActivating, false);
+    setAttribute(Qt::WA_TranslucentBackground, false);
 
     setupUI();
     setupContextMenu();

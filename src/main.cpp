@@ -11,10 +11,13 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     
     // Set application properties
-    app.setApplicationName("Clipboard Manager");
-    app.setApplicationVersion("1.0");
-    app.setOrganizationName("MyCompany");
-    app.setOrganizationDomain("mycompany.com");
+    app.setApplicationName("Xclipy");
+    app.setApplicationVersion("1.0.0");
+    app.setOrganizationName("Xclipy");
+    app.setOrganizationDomain("xclipy.com");
+    
+    // Set application icon
+    app.setWindowIcon(QIcon(":/icons/clipboard.png"));
     
     // Don't quit when last window is closed
     app.setQuitOnLastWindowClosed(false);
@@ -26,8 +29,8 @@ int main(int argc, char *argv[]) {
 
     // Tray icon
     QSystemTrayIcon tray;
-    tray.setIcon(QIcon::fromTheme("edit-paste"));
-    tray.setToolTip("Clipboard Manager");
+    tray.setIcon(QIcon(":/icons/clipboard.png"));
+    tray.setToolTip("Xclipy - Cross Platform Clipboard");
     tray.setVisible(manager.getShowTrayIcon());
 
     // Tray menu

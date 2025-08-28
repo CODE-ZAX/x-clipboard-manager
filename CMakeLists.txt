@@ -1,22 +1,20 @@
 cmake_minimum_required(VERSION 3.16)
-project(ClipboardManager VERSION 1.2.0 LANGUAGES CXX)
 
-# Set C++ standard
+# Set application version - this is the main version that will be used for packaging
+set(XCLIPY_VERSION "1.0.0")
+set(XCLIPY_VERSION_MAJOR "1")
+set(XCLIPY_VERSION_MINOR "0")
+set(XCLIPY_VERSION_PATCH "0")
+
+project(Xclipy VERSION ${XCLIPY_VERSION} LANGUAGES CXX)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Qt packages
-find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
-if(NOT Qt6_FOUND)
-    find_package(Qt5 5.12 COMPONENTS Core Gui Widgets REQUIRED)
-endif()
+# Find Qt6 components
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
-# Set output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
-# Source files
+# Set source files
 set(SOURCES
     src/main.cpp
     src/ClipboardManager.cpp
@@ -25,7 +23,7 @@ set(SOURCES
     src/GlobalHotkey.cpp
 )
 
-# Header files
+# Set header files
 set(HEADERS
     include/ClipboardManager.h
     include/HistoryWindow.h
@@ -33,57 +31,51 @@ set(HEADERS
     include/GlobalHotkey.h
 )
 
-# Resource files
+# Set resource files
 set(RESOURCES
     resources/resources.qrc
 )
 
 # Create executable
-add_executable(ClipboardManager ${SOURCES} ${HEADERS} ${RESOURCES})
+add_executable(Xclipy ${SOURCES} ${HEADERS} ${RESOURCES})
 
-# Include directories
-target_include_directories(ClipboardManager PRIVATE include)
-
-# Link Qt libraries
-target_link_libraries(ClipboardManager PRIVATE
-    Qt::Core
-    Qt::Gui
-    Qt::Widgets
+# Link Qt6 libraries
+target_link_libraries(Xclipy PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
 )
-
-# Platform-specific libraries for global hotkeys
-if(APPLE)
-    find_library(CARBON_LIBRARY Carbon)
-    target_link_libraries(ClipboardManager PRIVATE ${CARBON_LIBRARY})
-elseif(WIN32)
-    # Windows doesn't need additional libraries for global hotkeys
-elseif(UNIX AND NOT APPLE)
-    find_package(X11 REQUIRED)
-    target_link_libraries(ClipboardManager PRIVATE ${X11_LIBRARIES})
-    target_include_directories(ClipboardManager PRIVATE ${X11_INCLUDE_DIR})
-endif()
 
 # Platform-specific settings
 if(APPLE)
-    set_target_properties(ClipboardManager PROPERTIES
+    target_link_libraries(Xclipy PRIVATE "-framework Carbon")
+    set_target_properties(Xclipy PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resources/Info.plist"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist"
+        MACOSX_BUNDLE_VERSION "${XCLIPY_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${XCLIPY_VERSION_MAJOR}.${XCLIPY_VERSION_MINOR}"
     )
+elseif(WIN32)
+    # Windows-specific settings if needed
+elseif(UNIX AND NOT APPLE)
+    # Linux-specific settings
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(X11 REQUIRED x11)
+    target_link_libraries(Xclipy PRIVATE ${X11_LIBRARIES})
+    target_include_directories(Xclipy PRIVATE ${X11_INCLUDE_DIRS})
 endif()
 
+# Set output directory
+set_target_properties(Xclipy PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
 # Install rules
-install(TARGETS ClipboardManager
+install(TARGETS Xclipy
     RUNTIME DESTINATION bin
     BUNDLE DESTINATION .
 )
 
-# Optional: Install resources
-install(DIRECTORY resources/
-    DESTINATION share/ClipboardManager
-    FILES_MATCHING PATTERN "*.qrc"
-)
-
-# Optional: Install documentation
-install(FILES README.md
-    DESTINATION share/doc/ClipboardManager
-)
+# Print version information for debugging
+message(STATUS "Building Xclipy version: ${XCLIPY_VERSION}")
+message(STATUS "CMake minimum required: ${CMAKE_MINIMUM_REQUIRED_VERSION}")

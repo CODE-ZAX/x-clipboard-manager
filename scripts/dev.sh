@@ -57,7 +57,7 @@ run() {
     echo -e "${GREEN}Building and running ClipboardManager...${NC}"
     build
     echo -e "${GREEN}Starting application...${NC}"
-    open ./build/ClipboardManager.app
+    open ./build/Xclipy.app
 }
 
 # Function to format code

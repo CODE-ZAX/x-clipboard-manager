@@ -11,4 +11,8 @@
         <!-- Translations -->
         <file>translations/clipboardmanager_en.qm</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file>icons/clipboard.png</file>
+    </qresource>
 </RCC>
+

@@ -8,7 +8,7 @@
 ClipboardManager::ClipboardManager(QObject *parent)
     : QObject(parent),
       clipboard(QApplication::clipboard()),
-      settings("MyCompany", "ClipboardManager"),
+      settings("Xclipy", "Xclipy"),
       globalHotkeyManager(nullptr) {
 
     loadSettings();
