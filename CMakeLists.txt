@@ -8,6 +8,18 @@ set(XCLIPY_VERSION_PATCH "0")
 
 project(Xclipy VERSION ${XCLIPY_VERSION} LANGUAGES CXX)
 
+# Enable Qt meta object compiler and friends
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+# Universal build (unless overridden)
+if(APPLE)
+    if(NOT CMAKE_OSX_ARCHITECTURES)
+        set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
+    endif()
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
