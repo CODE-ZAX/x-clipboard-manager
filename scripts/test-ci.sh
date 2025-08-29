@@ -48,8 +48,23 @@ log "📦 Version: $VERSION"
 
 # Test builds
 log "🔨 Testing qmake build..."
-qmake ClipboardManager.pro
+
+# Clean any existing artifacts
 make clean >/dev/null 2>&1 || true
+rm -f .qmake.stash Makefile
+
+# Configure qmake (disable SDK version check on macOS)
+if [[ "$OSTYPE" == darwin* ]]; then
+    qmake ClipboardManager.pro CONFIG+=sdk_no_version_check
+else
+    qmake ClipboardManager.pro
+fi
+
+# Show available targets for debugging
+log "📋 Available Makefile targets:"
+make help 2>/dev/null || grep "^[a-zA-Z]" Makefile | head -5 || true
+
+# Build the application
 if make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4); then
     log "✅ qmake build successful"
 else

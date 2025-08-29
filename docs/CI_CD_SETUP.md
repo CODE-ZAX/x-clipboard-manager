@@ -187,6 +187,22 @@ The workflow automatically generates release notes, but you can customize the te
 2. Look for specific error messages in failed jobs
 3. Test locally with `./scripts/test-ci.sh`
 
+### **macOS SDK Version Issues**
+
+If you see warnings like "Qt has only been tested with version 14 of the platform SDK":
+
+1. The workflow automatically uses `CONFIG+=sdk_no_version_check` to bypass version warnings
+2. Uses macOS-13 runner for better Qt compatibility
+3. Cleans build cache (`.qmake.stash`) before building
+
+### **qmake Target Errors**
+
+If you see `make: *** No rule to make target 'Xclipy'. Stop.`:
+
+1. The workflow cleans all build artifacts before starting
+2. Uses explicit target detection and fallback to `make all`
+3. Ensures proper Makefile generation before building
+
 ### **Missing Distribution Files**
 
 - Ensure `deploy.sh` has execute permissions

@@ -37,8 +37,24 @@ jobs:
 
       - name: Test qmake build
         run: |
-          qmake ClipboardManager.pro
-          make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+          # Clean any existing build artifacts and cache
+          make clean 2>/dev/null || true
+          rm -f .qmake.stash Makefile
+
+          # Configure qmake with SDK version check disabled
+          qmake ClipboardManager.pro CONFIG+=sdk_no_version_check
+
+          # Debug: Show generated Makefile targets
+          echo "=== Available Makefile targets ==="
+          make help 2>/dev/null || grep "^[a-zA-Z]" Makefile | head -10 || true
+          echo "=================================="
+
+          # Build the application (use specific target if needed)
+          if make -n Xclipy 2>/dev/null; then
+            make Xclipy -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+          else
+            make all -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+          fi
 
       - name: Test CMake build
         run: |
@@ -50,7 +66,7 @@ jobs:
   # Universal macOS build and packaging
   build-macos:
     if: github.ref == 'refs/heads/main'
-    runs-on: macos-latest
+    runs-on: macos-13 # Use macOS 13 for better Qt compatibility
     needs: test
 
     steps:
@@ -73,9 +89,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
+      - name: Clean build environment
+        run: |
+          # Clean any existing build artifacts and Qt cache
+          rm -rf build/ .qmake.stash Makefile
+          # Ensure scripts are executable
+          chmod +x scripts/*.sh
+
       - name: Create universal macOS build
         run: |
-          chmod +x scripts/*.sh
           ./scripts/deploy.sh
 
       - name: Upload macOS artifacts

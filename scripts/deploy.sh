@@ -116,6 +116,14 @@ if [[ "$OSTYPE" == darwin* ]]; then
   if [[ -n "$QT_ROOT" && -d "$QT_ROOT" ]]; then
     cmake_common+=(-DCMAKE_PREFIX_PATH="$QT_ROOT")
   fi
+  
+  # CI environment: disable SDK version checks for compatibility
+  if [[ "${CI:-false}" == "true" || "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+    echo "🤖 Adding CI-specific build flags..."
+    cmake_common+=(-DCMAKE_OSX_DEPLOYMENT_TARGET="11.0")
+    # Also ensure we clean any cached qmake files
+    rm -f .qmake.stash Makefile
+  fi
 
   echo "🔨 Building arm64…"
   cmake -S . -B build/arm64 -DCMAKE_OSX_ARCHITECTURES=arm64 "${cmake_common[@]}"
