@@ -1,7 +1,7 @@
 class Xclipy < Formula
   desc "Cross Platform Clipboard Manager"
   homepage "https://github.com/yourusername/xclipy"
-  url "https://github.com/yourusername/xclipy/releases/download/v1.0.0/xclipy-1.0.0-macOS.tar.gz"
+  url "https://github.com/yourusername/xclipy/releases/download/v1.1.0/xclipy-1.1.0-macOS.tar.gz"
   sha256 "YOUR_SHA256_HERE"
   license "MIT"
   

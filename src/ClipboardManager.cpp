@@ -65,6 +65,8 @@ void ClipboardManager::setClipboardFiles(const QStringList &filePaths) {
     lastFiles = filePaths;           // update last seen files
 }
 
+
+
 void ClipboardManager::checkClipboard() {
     QString text = clipboard->text();
     QStringList files;

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Set application version - this is the main version that will be used for packaging
-set(XCLIPY_VERSION "1.0.0")
+set(XCLIPY_VERSION "1.1.0")
 set(XCLIPY_VERSION_MAJOR "1")
-set(XCLIPY_VERSION_MINOR "0")
+set(XCLIPY_VERSION_MINOR "1")
 set(XCLIPY_VERSION_PATCH "0")
 
 project(Xclipy VERSION ${XCLIPY_VERSION} LANGUAGES CXX)

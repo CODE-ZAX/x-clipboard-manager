@@ -2,7 +2,7 @@ TEMPLATE = app
 TARGET = Xclipy
 
 # Application metadata
-VERSION = 1.0.0
+VERSION = 1.1.0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 DEFINES += APP_NAME=\\\"Xclipy\\\"
 DEFINES += APP_ORGANIZATION=\\\"Xclipy\\\"
@@ -21,8 +21,8 @@ macx {
     QMAKE_INFO_PLIST = Info.plist
     
     # Set bundle version
-    QMAKE_BUNDLE_VERSION = 1.0.0
-    QMAKE_BUNDLE_SHORT_VERSION_STRING = 1.0
+    QMAKE_BUNDLE_VERSION = 1.1.0
+    QMAKE_BUNDLE_SHORT_VERSION_STRING = 1.1
     
     # Bundle identifier
     QMAKE_BUNDLE_IDENTIFIER = com.xclipy.app

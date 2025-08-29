@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     
     // Set application properties
     app.setApplicationName("Xclipy");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion("1.1.0");
     app.setOrganizationName("Xclipy");
     app.setOrganizationDomain("xclipy.com");
     
@@ -41,9 +41,7 @@ int main(int argc, char *argv[]) {
     QAction quitAction("Quit");
 
     QObject::connect(&showHistoryAction, &QAction::triggered, [&]() {
-        historyWin.show();
-        historyWin.raise();
-        historyWin.activateWindow();
+        historyWin.showWindow();
     });
 
     QObject::connect(&preferencesAction, &QAction::triggered, [&]() {
@@ -84,9 +82,7 @@ int main(int argc, char *argv[]) {
         if (historyWin.isVisible()) {
             historyWin.hide();
         } else {
-            historyWin.show();
-            historyWin.raise();
-            historyWin.activateWindow();
+            historyWin.showWindow();
         }
     });
 
