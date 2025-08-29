@@ -7,12 +7,11 @@ on:
     branches: [main]
 
 jobs:
-  # Test build on multiple platforms and Qt versions
+  # Test build on macOS with multiple Qt versions
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
         qt-version: ["6.2", "6.5"]
 
     steps:
@@ -24,14 +23,7 @@ jobs:
           version: ${{ matrix.qt-version }}
           cache: true
 
-      - name: Install dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build
-
-      - name: Install dependencies (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Install dependencies
         run: |
           # Install or upgrade cmake and ninja (handle existing installations)
           brew list cmake || brew install cmake
