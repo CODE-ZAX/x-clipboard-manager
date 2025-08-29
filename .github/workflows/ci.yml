@@ -2,98 +2,245 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  build:
+  # Test build on multiple platforms and Qt versions
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        qt-version: ['5.15', '6.2']
+        qt-version: ["6.2", "6.5"]
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: ${{ matrix.qt-version }}
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ matrix.qt-version }}
+          cache: true
 
-    - name: Install dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
 
-    - name: Install dependencies (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install cmake
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install cmake ninja
 
-    - name: Build with qmake
-      run: |
-        qmake ClipboardManager.pro
-        make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+      - name: Test qmake build
+        run: |
+          qmake ClipboardManager.pro
+          make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
-    - name: Build with CMake
-      run: |
-        mkdir build-cmake
-        cd build-cmake
-        cmake ..
-        make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+      - name: Test CMake build
+        run: |
+          mkdir build-test
+          cd build-test
+          cmake .. -G Ninja
+          ninja
 
-    - name: Test build artifacts
-      run: |
-        ls -la build/
-        ls -la build-cmake/bin/
-
-  package:
-    needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+  # Universal macOS build and packaging
+  build-macos:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    needs: test
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: '6.2'
+      - name: Install Qt 6.9
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: "6.9.2"
+          cache: true
 
-    - name: Build and package
-      run: |
-        chmod +x scripts/*.sh
-        ./scripts/package.sh
+      - name: Install dependencies
+        run: |
+          brew install cmake ninja create-dmg
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: ClipboardManager-${{ matrix.os }}
-        path: packages/
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep -Eo 'set\(XCLIPY_VERSION "[0-9]+\.[0-9]+\.[0-9]+"\)' CMakeLists.txt | head -1 | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
 
-  release:
-    needs: package
+      - name: Create universal macOS build
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/deploy.sh
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xclipy-macos-universal
+          path: |
+            build/*.dmg
+            build/*.zip
+            build/*-source.tar.gz
+          retention-days: 30
+
+  # Linux build and packaging
+  build-linux:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
+    needs: test
+
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: "6.5.3"
+          cache: true
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          ClipboardManager-ubuntu-latest/**/*
-          ClipboardManager-macos-latest/**/*
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep -Eo 'set\(XCLIPY_VERSION "[0-9]+\.[0-9]+\.[0-9]+"\)' CMakeLists.txt | head -1 | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build for Linux
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
+          ninja
+
+          # Create Linux distribution
+          VERSION="${{ steps.version.outputs.version }}"
+          tar -czf "xclipy-${VERSION}-Linux.tar.gz" Xclipy
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xclipy-linux
+          path: build/*.tar.gz
+          retention-days: 30
+
+  # Create GitHub release with all artifacts
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [build-macos, build-linux]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version and changelog
+        id: version
+        run: |
+          VERSION=$(grep -Eo 'set\(XCLIPY_VERSION "[0-9]+\.[0-9]+\.[0-9]+"\)' CMakeLists.txt | head -1 | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+          # Extract current version changelog
+          if [[ -f "CHANGELOG.md" ]]; then
+            # Get content between current version and next version or end of file
+            CHANGELOG=$(awk '/^## \['"$VERSION"'\]/, /^## \[/ {if (/^## \[/ && !/^## \['"$VERSION"'\]/) exit; print}' CHANGELOG.md | head -n -1 || true)
+            if [[ -n "$CHANGELOG" ]]; then
+              echo "changelog<<EOF" >> $GITHUB_OUTPUT
+              echo "$CHANGELOG" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+
+          # Copy macOS files
+          find artifacts/xclipy-macos-universal/ -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*-source.tar.gz" \) -exec cp {} release-files/ \;
+
+          # Copy Linux files
+          find artifacts/xclipy-linux/ -name "*.tar.gz" -exec cp {} release-files/ \;
+
+          # List what we're releasing
+          echo "Release files:"
+          ls -la release-files/
+
+      - name: Check if release exists
+        id: check_release
+        run: |
+          if git tag -l "${{ steps.version.outputs.tag }}" | grep -q "${{ steps.version.outputs.tag }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete existing release if it exists
+        if: steps.check_release.outputs.exists == 'true'
+        run: |
+          gh release delete "${{ steps.version.outputs.tag }}" --yes || true
+          git tag -d "${{ steps.version.outputs.tag }}" || true
+          git push origin --delete "${{ steps.version.outputs.tag }}" || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Xclipy ${{ steps.version.outputs.version }}"
+          body: |
+            ## Xclipy ${{ steps.version.outputs.version }}
+
+            ${{ steps.version.outputs.changelog }}
+
+            ### Downloads
+
+            **macOS (Universal - Intel & Apple Silicon):**
+            - `.dmg` - Drag and drop installer
+            - `.zip` - Portable archive
+
+            **Linux:**
+            - `.tar.gz` - Portable archive
+
+            **Source Code:**
+            - `xclipy-${{ steps.version.outputs.version }}-source.tar.gz` - Complete source distribution
+
+            ### Installation
+
+            **macOS:**
+            1. Download the `.dmg` file
+            2. Open the DMG and drag Xclipy to Applications
+            3. Run Xclipy from Applications or Spotlight
+
+            **Linux:**
+            1. Download the `.tar.gz` file
+            2. Extract: `tar -xzf xclipy-${{ steps.version.outputs.version }}-Linux.tar.gz`
+            3. Run: `./Xclipy`
+
+            ### System Requirements
+            - macOS 11.0+ (Universal - supports both Intel and Apple Silicon)
+            - Linux with Qt 6.2+
+
+            ---
+
+            *Built automatically from commit ${{ github.sha }}*
+          files: release-files/*
+          draft: false
+          prerelease: false
+          make_latest: true
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,9 +4,24 @@ set -euo pipefail
 echo "🚀 Deploying Xclipy..."
 
 # --- Config ---
-QT_VERSION="6.9.2"
-QT_ROOT="$HOME/Qt/${QT_VERSION}/macos"
+QT_VERSION="${QT_VERSION:-6.9.2}"
+QT_ROOT="${QT_ROOT:-$HOME/Qt/${QT_VERSION}/macos}"
 APP_NAME="Xclipy"
+
+# CI environment detection and Qt path override
+if [[ "${CI:-false}" == "true" || "${GITHUB_ACTIONS:-false}" == "true" ]]; then
+    echo "🤖 CI environment detected"
+    # In GitHub Actions, Qt is installed via install-qt-action
+    if [[ -n "${Qt6_DIR:-}" ]]; then
+        QT_ROOT="$Qt6_DIR"
+    elif [[ -n "${QT_ROOT_DIR:-}" ]]; then
+        QT_ROOT="$QT_ROOT_DIR"
+    elif command -v qmake >/dev/null 2>&1; then
+        # Try to find Qt root from qmake
+        QT_ROOT="$(qmake -query QT_INSTALL_PREFIX)"
+    fi
+    echo "🔍 Using Qt root: $QT_ROOT"
+fi
 
 # --- Helpers ---
 die() { echo "❌ $*" >&2; exit 1; }
@@ -37,13 +52,53 @@ fi
 echo "✅ CMake found: $(which cmake)"
 echo "ℹ️ CMake version: $(cmake --version | head -n 1)"
 
-# Sanity: Qt present
-[[ -d "$QT_ROOT" ]] || die "Qt not found at $QT_ROOT"
+# Sanity: Qt present (more flexible check for CI)
+if [[ ! -d "$QT_ROOT" ]]; then
+    echo "⚠️  Qt not found at $QT_ROOT, trying to locate Qt installation..."
+    
+    # Try alternative Qt locations
+    ALT_QT_PATHS=(
+        "/opt/Qt/*/macos"
+        "/usr/local/Qt*"
+        "$(dirname "$(which qmake 2>/dev/null || echo /nonexistent)")"
+    )
+    
+    QT_FOUND=false
+    for qt_path in "${ALT_QT_PATHS[@]}"; do
+        expanded_paths=($(echo $qt_path))
+        for path in "${expanded_paths[@]}"; do
+            if [[ -d "$path" ]] && [[ -f "$path/bin/qmake" || -f "$path/qmake" ]]; then
+                QT_ROOT="$path"
+                QT_FOUND=true
+                echo "✅ Found Qt at: $QT_ROOT"
+                break 2
+            fi
+        done
+    done
+    
+    if [[ "$QT_FOUND" == "false" ]]; then
+        # Last resort: check if qmake is in PATH
+        if command -v qmake >/dev/null 2>&1; then
+            echo "⚠️  Using Qt from PATH (qmake found)"
+            QT_ROOT=""  # Don't set specific root, rely on PATH
+        else
+            die "Qt not found. Please install Qt or set QT_ROOT environment variable"
+        fi
+    fi
+fi
 
-# Clean environment
-unset PKG_CONFIG_PATH QTDIR QT_PLUGIN_PATH QT_QPA_PLATFORM_PLUGIN_PATH \
-      DYLD_FRAMEWORK_PATH DYLD_LIBRARY_PATH
-export PATH="${QT_ROOT}/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# Clean environment (only if not in CI)
+if [[ "${CI:-false}" != "true" && "${GITHUB_ACTIONS:-false}" != "true" ]]; then
+    unset PKG_CONFIG_PATH QTDIR QT_PLUGIN_PATH QT_QPA_PLATFORM_PLUGIN_PATH \
+          DYLD_FRAMEWORK_PATH DYLD_LIBRARY_PATH
+fi
+
+# Set PATH (include Qt bin if we have a specific Qt root)
+if [[ -n "$QT_ROOT" && -d "$QT_ROOT/bin" ]]; then
+    export PATH="${QT_ROOT}/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+elif [[ -n "$QT_ROOT" && -f "$QT_ROOT/qmake" ]]; then
+    export PATH="${QT_ROOT}:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+fi
 
 # --- macOS Universal Build ---
 if [[ "$OSTYPE" == darwin* ]]; then
@@ -53,10 +108,14 @@ if [[ "$OSTYPE" == darwin* ]]; then
 
   # Common cmake args
   cmake_common=(
-    -DCMAKE_PREFIX_PATH="$QT_ROOT"
     -DCMAKE_FIND_FRAMEWORK="FIRST"
     -DCMAKE_BUILD_TYPE="Release"
   )
+  
+  # Add Qt prefix path if we have a specific Qt root
+  if [[ -n "$QT_ROOT" && -d "$QT_ROOT" ]]; then
+    cmake_common+=(-DCMAKE_PREFIX_PATH="$QT_ROOT")
+  fi
 
   echo "🔨 Building arm64…"
   cmake -S . -B build/arm64 -DCMAKE_OSX_ARCHITECTURES=arm64 "${cmake_common[@]}"
